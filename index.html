@@ -95,6 +95,11 @@ main{position:relative; z-index:2; min-height:100dvh; display:flex; flex-directi
 }
 .sound:focus-visible{outline:2px solid var(--gold-400); outline-offset:3px;}
 
+.trust{
+  margin:-12px 0 18px; font-size:11px; letter-spacing:.08em;
+  color:rgba(255,236,196,.42); text-align:center;
+}
+
 /* packet */
 .packet{
   position:relative; width:min(58vw,208px); aspect-ratio:1/1.18; margin:0 auto;
@@ -197,6 +202,8 @@ main{position:relative; z-index:2; min-height:100dvh; display:flex; flex-directi
     <button class="btn solid" id="okName" type="button">确定</button>
   </div>
 
+  <p class="trust">只填一个昵称 · 不收钱 · 不填密码 · 不转账</p>
+
   <div id="stage"></div>
 
   <div class="league">
@@ -204,7 +211,7 @@ main{position:relative; z-index:2; min-height:100dvh; display:flex; flex-directi
     <ol id="board"></ol>
   </div>
 
-  <p class="foot">金币为游戏积分，不可兑换现金。<br>每周结算一次，排行榜前 10 名按金币比例瓜分 ¥10 奖池。</p>
+  <p class="foot">金币是游戏积分，不换钱、不提现。<br>每周日结算，前 10 名由群主在 QQ 里直接发红包，按金币比例分。</p>
 </main>
 
 <div class="flash" id="flash"></div>
