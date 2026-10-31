@@ -214,7 +214,7 @@ main{position:relative; z-index:2; min-height:100dvh; display:flex; flex-directi
   "use strict";
 
   /* ====== 后端地址：云托管服务部署好后填这里 ====== */
-  var API = "";
+  var API = "https://rank-338943-8-1378968076.sh.run.tcloudbase.com";
 
   var TIERS = [
     { star: 1, color: "#D0242F", name: "红", from: 1,  to: 7  },
@@ -255,6 +255,11 @@ main{position:relative; z-index:2; min-height:100dvh; display:flex; flex-directi
     return TIERS[0];
   }
   function coinsFor(level) { return Math.round(level * level * 1200); }
+
+  function tierFor(star) {
+    for (var i = 0; i < TIERS.length; i++) if (TIERS[i].star === star) return TIERS[i];
+    return TIERS[0];
+  }
 
   function localRoll() {
     var t = rollTier();
@@ -401,20 +406,56 @@ main{position:relative; z-index:2; min-height:100dvh; display:flex; flex-directi
     return ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]; }); }
 
   /* ---------- 抽一次 ---------- */
+  function showResult(r, sync) {
+    if (sync !== false) { state.coins += r.coins; save(); }
+    renderResult(r);
+    chime(r.tier.star);
+    updateMine();
+  }
+
   function draw() {
     if (!state.name) setName(document.getElementById("nm") ? document.getElementById("nm").value : "");
     var packet = document.getElementById("packet");
     if (packet) packet.style.pointerEvents = "none";
     fireFlash();
+
     setTimeout(function () {
-      var r = localRoll();
-      state.coins += r.coins;
-      save();
-      renderResult(r);
-      chime(r.tier.star);
-      updateMine();
-      submit(r);
+      if (!API) { showResult(localRoll()); return; }
+
+      fetch(API + "/play", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: state.name })
+      })
+        .then(function (x) { return x.json().then(function (d) { return { s: x.status, d: d }; }); })
+        .then(function (o) {
+          if (o.s === 403) { showClosed(o.d); return; }
+          if (o.s === 429) { showWait(o.d); return; }
+          var hit = o.d.you.hit;
+          applyServer(o.d);
+          showResult({ tier: tierFor(hit.star), level: hit.level, coins: hit.coins }, false);
+        })
+        .catch(function () { showResult(localRoll()); });
     }, 260);
+  }
+
+  function showClosed(d) {
+    var hr = d.nextOpen >= 24 ? (d.nextOpen - 24) : d.nextOpen;
+    var day = d.nextOpen >= 24 ? "明天" : "今天";
+    stage.innerHTML =
+      '<div class="result"><p class="rp-tier" style="font-size:14px;line-height:1.9">' +
+      "现在不在开放时段<br>下一场 " + day + " " + hr + " 点开抢<br>" +
+      '<span style="opacity:.6;font-size:12px">每天 24 小时里随机放 16 小时</span></p>' +
+      '<div class="acts"><button class="btn ghost" id="back">知道了</button></div></div>';
+    document.getElementById("back").addEventListener("click", renderIdle);
+  }
+
+  function showWait(d) {
+    stage.innerHTML =
+      '<div class="result"><p class="rp-tier" style="font-size:14px;line-height:1.9">' +
+      (d.error || "太快了") + "<br>还有 " + (d.wait || 3) + " 秒" +
+      '</p><div class="acts"><button class="btn ghost" id="back">好</button></div></div>';
+    document.getElementById("back").addEventListener("click", renderIdle);
   }
 
   function setName(v) {
@@ -435,20 +476,6 @@ main{position:relative; z-index:2; min-height:100dvh; display:flex; flex-directi
   }
 
   /* ---------- 后端同步（没配置就跳过） ---------- */
-  function submit(r) {
-    if (!API) {
-      state.top = state.top.length ? state.top : [];
-      return;
-    }
-    fetch(API + "/play", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: state.name, coins: r.coins, level: r.level })
-    }).then(function (x) { return x.json(); })
-      .then(function (d) { applyServer(d); })
-      .catch(function () {});
-  }
-
   function applyServer(d) {
     if (!d) return;
     if (d.top) state.top = d.top;
@@ -499,6 +526,7 @@ main{position:relative; z-index:2; min-height:100dvh; display:flex; flex-directi
     renderIdle();
     updateMine();
     if (!API) board.innerHTML = '<li class="empty">排行榜接入后显示</li>';
+    else { refresh(); }
     initName();
     initSound();
   }
